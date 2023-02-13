@@ -35,8 +35,8 @@ const gameState = {
   pointer: {
     x: 0,
     y: 0,
-    width: 5,
-    height: 5,
+    width: 10,
+    height: 10,
   },
 }
 
@@ -117,11 +117,10 @@ function isCollision() {
 
 function boxCollision() {
   //return false
-  return gameState.pointer.x + gameState.pointer.width / 2 < gameState.redSqure.x + gameState.redSqure.width / 2 &&
-    gameState.pointer.x - gameState.pointer.width / 2 > gameState.redSqure.x - gameState.redSqure.width / 2 && 
-    gameState.pointer.y + gameState.pointer.height / 2 < gameState.redSqure.y + gameState.redSqure.height / 2 && 
-    gameState.pointer.y - gameState.pointer.height / 2 > gameState.redSqure.y - gameState.redSqure.height / 2;
-
+  return gameState.pointer.x - gameState.pointer.width * 0.5 <= gameState.redSqure.x + gameState.redSqure.width * 0.5 &&
+  gameState.pointer.x + gameState.pointer.width  * 0.5  >= gameState.redSqure.x - gameState.redSqure.width * 0.5 && 
+  gameState.pointer.y - gameState.pointer.height * 0.5 <= gameState.redSqure.y + gameState.redSqure.height * 0.5 &&
+  gameState.pointer.y + gameState.pointer.height * 0.5 >= gameState.redSqure.y - gameState.redSqure.height * 0.5;
   if (gameState.pointer.x < gameState.redSqure.x + gameState.redSqure.width && 
       gameState.redSqure.x < gameState.pointer.x + gameState.pointer.width &&
       gameState.pointer.y < gameState.redSqure.y + gameState.redSqure.height && 
