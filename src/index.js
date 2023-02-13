@@ -1,9 +1,9 @@
 const gameState = {
   score: 0,
-  ballTimeout: 30,
-  bonusTimeout: 30,
   isPause: true,
   timer: null,
+  ballSpeedTimer: null,
+  bonusTimer: null,
   racket: {
     x: 100,
     y: 100,
@@ -64,6 +64,17 @@ function run() {
   awake()
   draw()
   gameState.timer = setInterval(gameLoop, 1000 / 60)
+  gameState.ballSpeedTimer = setInterval(increaseBallSpeed, 10000)
+  gameState.bonusTimer = setInterval(spawnBonus, 30000)
+}
+
+function increaseBallSpeed() {
+  gameState.ball.speed *= 1.1
+}
+
+function spawnBonus() {
+  gameState.gameState.bonus.y = 0
+  gameState.bonus.active = true
 }
 
 function gameLoop() {
@@ -187,7 +198,7 @@ function update() {
       break
     }
     case collisionType.bottom:{
-      clearInterval(gameState.timer)
+      gameOver()
       break
     }
     case collisionType.top: {
@@ -216,6 +227,13 @@ function update() {
       }
     }
   }
+}
+
+function gameOver() {
+  clearInterval(gameState.timer)
+  clearInterval(gameState.ballSpeedTimer)
+  clearInterval(gameState.bonusTimer)
+
 }
 
 run()
