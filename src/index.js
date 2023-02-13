@@ -9,7 +9,7 @@ class Ball {
 	constructor() {
 		this.x = 100
 		this.y = 100
-		this.radius = 6
+		this.radius = 20
 		this.color = "#00FF00"
 		this.speed = 1
 		this.direction = new Vector2(0, -1)
@@ -29,7 +29,7 @@ const gameState = {
   redSqure: {
     x: 100,
     y: 100,
-    width: 50,
+    width: 200,
     height: 50,
   },
   pointer: {
@@ -52,6 +52,8 @@ function run() {
   function onMouseMove(e) {
     gameState.pointer.x = e.pageX
     gameState.pointer.y = e.pageY
+    ball.x = e.pageX
+    ball.y = e.pageY
   }
   setInterval(gameLoop, 1000 / 60)
 }
@@ -66,8 +68,8 @@ function drawBall(context) {
   //const y = canvas.height / 2
   context.lineWidth = 3
   context.beginPath()
-  context.strokeStyle = ball.color
-  context.fillStyle = ball.color
+  context.strokeStyle = b ? "#00FF00" : ball.color
+  context.fillStyle = b ? "#00FF00" : ball.color
   context.fill()
   context.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI, false);
   context.fill()
@@ -116,24 +118,35 @@ function isCollision() {
 }
 
 function boxCollision() {
-  //return false
   return gameState.pointer.x - gameState.pointer.width * 0.5 <= gameState.redSqure.x + gameState.redSqure.width * 0.5 &&
   gameState.pointer.x + gameState.pointer.width  * 0.5  >= gameState.redSqure.x - gameState.redSqure.width * 0.5 && 
   gameState.pointer.y - gameState.pointer.height * 0.5 <= gameState.redSqure.y + gameState.redSqure.height * 0.5 &&
   gameState.pointer.y + gameState.pointer.height * 0.5 >= gameState.redSqure.y - gameState.redSqure.height * 0.5;
-  if (gameState.pointer.x < gameState.redSqure.x + gameState.redSqure.width && 
-      gameState.redSqure.x < gameState.pointer.x + gameState.pointer.width &&
-      gameState.pointer.y < gameState.redSqure.y + gameState.redSqure.height && 
-      gameState.redSqure.y < gameState.pointer.y + gameState.pointer.height)
-    return true
-  return false
+}
+
+function circleCollision() {
+  let clamp = (value, min, max) => value < min ? min : value > max ? max : value
+
+  const left = gameState.redSqure.x - gameState.redSqure.width * 0.5
+  const right = gameState.redSqure.x + gameState.redSqure.width * 0.5
+  const bottom = gameState.redSqure.y - gameState.redSqure.height * 0.5
+  const top = gameState.redSqure.y + gameState.redSqure.height * 0.5
+
+  const closestX = clamp(ball.x, left, right)
+  const closestY = clamp(ball.y, bottom, top) 
+
+  const distanceX = ball.x - closestX
+  const distanceY = ball.y - closestY
+
+  return distanceX * distanceX + distanceY * distanceY <= ball.radius * ball.radius
 }
 
 var xDir = 0
 var yDir = 1
 var speed = 3
 function update() {
-  b = boxCollision()
+  // b = boxCollision()
+  b = circleCollision()
   
   return
   const vx = (gameState.pointer.x - gameState.redSqure.x) / 10
