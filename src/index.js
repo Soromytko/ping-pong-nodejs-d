@@ -1,43 +1,38 @@
-class Vector2 {
-	constructor(x, y) {
-		this.x = x
-		this.y = y
-	}
-}
-
-class Ball {
-	constructor() {
-		this.x = 100
-		this.y = 100
-		this.radius = 20
-		this.color = "#00FF00"
-		this.speed = 1
-		this.direction = new Vector2(0, -1)
-	}
-	
-	move(xDir, yDir) {
-		this.x += xDir
-		this.y += yDir
-	}
-}
-
-var ball = new Ball(7)
-ball.color = "#000000"
-var b = false
-
 const gameState = {
-  redSqure: {
+  score: 0,
+  ballTimeout: 30,
+  bonusTimeout: 30,
+  isPause: true,
+  timer: null,
+  racket: {
     x: 100,
     y: 100,
     width: 200,
     height: 50,
+    color: "#FF0000",
   },
   pointer: {
     x: 0,
     y: 0,
-    width: 10,
-    height: 10,
   },
+  ball: {
+    x: 100,
+    y: 100,
+    radius: 20,
+    color: "#000000",
+    xDir: 0,
+    yDir: 1,
+    speed: 10,
+  },
+  bonus: {
+    x: 100,
+    y: 100,
+    width: 50,
+    height: 50,
+    speed: 5,
+    color: "#808080",
+    active: false,
+  }
 }
 
 const collisionType = {
@@ -55,30 +50,32 @@ canvas.height = window.innerHeight
 //TODO: subscribe on window resize
 function run() {
   canvas.addEventListener('mousemove', onMouseMove, false)
+  canvas.addEventListener('mousedown', onMouseDown, false)
+
+  function onMouseDown(e) {
+    gameState.isPause = !gameState.isPause
+  }
 
   function onMouseMove(e) {
     gameState.pointer.x = e.pageX
     gameState.pointer.y = e.pageY
   }
-  setInterval(gameLoop, 1000 / 60)
+  
+  awake()
+  draw()
+  gameState.timer = setInterval(gameLoop, 1000 / 60)
 }
 
 function gameLoop() {
-  draw()
-  update()
+  if (!gameState.isPause) {
+    draw()
+    update()
+  }
 }
 
-function drawBall(context) {
-  //const x = canvas.width / 2
-  //const y = canvas.height / 2
-  context.lineWidth = 3
-  context.beginPath()
-  context.strokeStyle = ball.color
-  context.fillStyle = ball.color
-  context.fill()
-  context.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI, false);
-  context.fill()
-  context.stroke()
+function awake() {
+  gameState.racket.y = canvas.height - gameState.racket.height / 2
+  gameState.bonus.active = true
 }
 
 function draw() {
@@ -87,91 +84,138 @@ function draw() {
   // clear canvas
   context.clearRect(0, 0, canvas.width, canvas.height)
 
-  // draw redSqure
-  const {x, y, width, height} = gameState.redSqure
-
+  // draw racket
+  const {x, y, width, height} = gameState.racket
   context.beginPath()
   context.rect(x - width/ 2, y - height/2, width, height)
-  context.fillStyle = "#FF0000"
+  context.fillStyle = gameState.racket.color
   context.fill()
   context.closePath()
   
-  // draw pointer
-  const pointer = gameState.pointer
-  context.fillStyle = "#00FF00"
-  context.fillRect(pointer.x-5,pointer.y-5,10,10)
-  
   //draw ball
-  drawBall(context)
+  context.lineWidth = 3
+  context.beginPath()
+  context.strokeStyle = gameState.ball.color
+  context.fillStyle = gameState.ball.color
+  context.fill()
+  context.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, 2 * Math.PI, false);
+  context.fill()
+  context.stroke()
+
+  //draw bonus
+  if (gameState.bonus.active) {
+    const { x, y, width, height, color } = gameState.bonus
+    context.beginPath()
+    context.rect(x - width * 0.1, y - height * 0.5, width * 0.2, height)
+    context.rect(x - width * 0.5, y - height * 0.1, width, height * 0.2)
+    context.fillStyle = color
+    context.fill()
+    context.closePath()
+  }
 }
 
-function circleCollision() {
+// circle {x, y, radius}, rect {x, y, width, height}
+function circleVsRectCollision(circle, rect) {
   let clamp = (value, min, max) => value < min ? min : value > max ? max : value
+  
+  const left = rect.x - rect.width * 0.5
+  const right = rect.x + rect.width * 0.5
+  const bottom = rect.y - rect.height * 0.5
+  const top = rect.y + rect.height * 0.5
+  
+  const closestX = clamp(circle.x, left, right)
+  const closestY = clamp(circle.y, bottom, top) 
+  
+  const distanceX = circle.x - closestX
+  const distanceY = circle.y - closestY
+  
+  return distanceX * distanceX + distanceY * distanceY <= circle.radius * circle.radius
+}
 
-  const left = gameState.redSqure.x - gameState.redSqure.width * 0.5
-  const right = gameState.redSqure.x + gameState.redSqure.width * 0.5
-  const bottom = gameState.redSqure.y - gameState.redSqure.height * 0.5
-  const top = gameState.redSqure.y + gameState.redSqure.height * 0.5
-
-  const closestX = clamp(ball.x, left, right)
-  const closestY = clamp(ball.y, bottom, top) 
-
-  const distanceX = ball.x - closestX
-  const distanceY = ball.y - closestY
-
-  return distanceX * distanceX + distanceY * distanceY <= ball.radius * ball.radius
+// rect {x, y, width, height}
+function rectVsRectCollision(first, second) {
+  return first.x - first.width * 0.5 <= second.x + second.width * 0.5 &&
+    first.x + first.width  * 0.5  >= second.x - second.width * 0.5 && 
+    first.y - first.height * 0.5 <= second.y + second.height * 0.5 &&
+    first.y + first.height * 0.5 >= second.y - second.height * 0.5;
 }
 
 // returns the string type of the collision object
-function getCollisionType() {
-  if (circleCollision()) return collisionType.racket
-  
-  if (ball.y + ball.radius >= canvas.height) return collisionType.bottom
+function getBallCollisionType() {
+  if (circleVsRectCollision(gameState.ball, gameState.racket))
+    return collisionType.racket
+  if (gameState.ball.x - gameState.ball.radius <= 0)
+    return collisionType.left
+  if (gameState.ball.x + gameState.ball.radius >= canvas.width)
+    return collisionType.right
+  if (gameState.ball.y - gameState.ball.radius <= 0)
+    return collisionType.top
+  if (gameState.ball.y + gameState.ball.radius >= canvas.height)
+  return collisionType.bottom
+
   return ""
 }
 
-var xDir = 0
-var yDir = 1
-var speed = 5
+function getBonusCollisionType() {
+  if (rectVsRectCollision(gameState.bonus, gameState.racket))
+    return collisionType.racket
+  if (gameState.bonus.y - gameState.bonus.size > canvas.height)
+    return collisionType.bottom
+  return ""
+}
+
 function update() {
-  // b = boxCollision()
-  // b = circleCollision()
-  // return
-
-  const vx = (gameState.pointer.x - gameState.redSqure.x) / 10
-  const vy = (gameState.pointer.y - gameState.redSqure.y) / 10
-
-  gameState.redSqure.x += vx
-  //gameState.redSqure.y += vy
-  gameState.redSqure.y = canvas.height * 0.9
+  gameState.racket.x += (gameState.pointer.x - gameState.racket.x) / 2
+  gameState.racket.y = canvas.height - gameState.racket.height / 2
   
-  const collision = getCollisionType()
-
+  const collision = getBallCollisionType()
   switch (collision) {
     case collisionType.racket: {
-      console.log("racket")
+      const xDir = gameState.ball.x - gameState.racket.x
+      const yDir = gameState.ball.y - gameState.racket.y
+      const n = Math.sqrt(xDir * xDir + yDir * yDir)
+      gameState.ball.xDir = xDir / n
+      gameState.ball.yDir = yDir / n
       break
     }
     case collisionType.left: {
-      console.log("left")
+      gameState.ball.xDir *= -1
       break
     }
     case collisionType.right: {
-      console.log("right")
+      gameState.ball.xDir *= -1
       break
     }
     case collisionType.bottom:{
-      console.log("bottom")
+      clearInterval(gameState.timer)
       break
     }
     case collisionType.top: {
-      console.log("top")
+      gameState.ball.yDir *= -1
       break
     }
   }
 
-  if (!collision)
-    ball.move(xDir, yDir * speed)
+  gameState.ball.x += gameState.ball.xDir * gameState.ball.speed
+  gameState.ball.y += gameState.ball.yDir * gameState.ball.speed
+
+  if (gameState.bonus.active || true) {
+    switch(getBonusCollisionType()) {
+      case collisionType.racket: {
+        gameState.bonus.active = false
+        console.log("bonus vs rocket collision")
+        break
+      }
+      case collisionType.bottom: {
+        gameState.bonus.active = false
+        break
+      }
+      default: {
+        gameState.bonus.y += gameState.bonus.speed
+        break
+      }
+    }
+  }
 }
 
 run()
