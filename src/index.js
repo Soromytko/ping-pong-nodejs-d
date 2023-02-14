@@ -2,12 +2,13 @@ const gameState = {
   score: 0,
   isPause: true,
   timer: null,
+  scoreTimer: null,
   ballSpeedTimer: null,
   bonusTimer: null,
   racket: {
     x: 100,
     y: 100,
-    width: 200,
+    width: 300,
     height: 50,
     color: "#FF0000",
   },
@@ -30,6 +31,7 @@ const gameState = {
     width: 50,
     height: 50,
     speed: 5,
+    value: 10,
     color: "#808080",
     active: false,
   }
@@ -54,6 +56,15 @@ function run() {
 
   function onMouseDown(e) {
     gameState.isPause = !gameState.isPause
+    if(gameState.isPause) {
+      clearInterval(gameState.scoreTimer)
+      clearInterval(gameState.ballSpeedTimer)
+      clearInterval(gameState.bonusTimer)
+    } else {
+      gameState.scoreTimer = setInterval(increaseScore, 1000)
+      gameState.ballSpeedTimer = setInterval(increaseBallSpeed, 10000)
+      gameState.bonusTimer = setInterval(spawnBonus, 30000)
+    }
   }
 
   function onMouseMove(e) {
@@ -64,29 +75,36 @@ function run() {
   awake()
   draw()
   gameState.timer = setInterval(gameLoop, 1000 / 60)
-  gameState.ballSpeedTimer = setInterval(increaseBallSpeed, 10000)
-  gameState.bonusTimer = setInterval(spawnBonus, 30000)
+}
+
+function increaseScore() {
+  gameState.score += 1
 }
 
 function increaseBallSpeed() {
   gameState.ball.speed *= 1.1
 }
 
+function random(min, max) {
+  return Math.floor(Math.random() * (max - min) + min)
+}
+
 function spawnBonus() {
-  gameState.gameState.bonus.y = 0
+  gameState.bonus.x = random(gameState.bonus.width, canvas.width - gameState.bonus.width)
+  gameState.bonus.y = 0
   gameState.bonus.active = true
 }
 
 function gameLoop() {
+  draw()
   if (!gameState.isPause) {
-    draw()
     update()
   }
 }
 
 function awake() {
   gameState.racket.y = canvas.height - gameState.racket.height / 2
-  gameState.bonus.active = true
+  // gameState.bonus.active = true
 }
 
 function draw() {
@@ -103,7 +121,7 @@ function draw() {
   context.fill()
   context.closePath()
   
-  //draw ball
+  // draw ball
   context.lineWidth = 3
   context.beginPath()
   context.strokeStyle = gameState.ball.color
@@ -112,8 +130,9 @@ function draw() {
   context.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, 2 * Math.PI, false);
   context.fill()
   context.stroke()
+  context.closePath()
 
-  //draw bonus
+  // draw bonus
   if (gameState.bonus.active) {
     const { x, y, width, height, color } = gameState.bonus
     context.beginPath()
@@ -123,6 +142,22 @@ function draw() {
     context.fill()
     context.closePath()
   }
+  
+  // draw text
+  if (gameState.isPause) {
+    context.beginPath()
+    context.font = "50px Arial"
+    context.fillStyle = "black"
+    context.textAlign = "center";
+    context.fillText("PAUSE", canvas.width / 2, canvas.height / 2)
+    context.closePath()
+  }
+  context.beginPath()
+  context.font = "30px Arial"
+  context.fillStyle = "black"
+  context.textAlign = "center";
+  context.fillText(gameState.score, 20, 50)
+  context.closePath()
 }
 
 // circle {x, y, radius}, rect {x, y, width, height}
@@ -183,18 +218,18 @@ function update() {
   switch (collision) {
     case collisionType.racket: {
       const xDir = gameState.ball.x - gameState.racket.x
-      const yDir = gameState.ball.y - gameState.racket.y
+      const yDir = gameState.ball.y - (gameState.racket.y + gameState.racket.height * 0.5)
       const n = Math.sqrt(xDir * xDir + yDir * yDir)
       gameState.ball.xDir = xDir / n
       gameState.ball.yDir = yDir / n
       break
     }
     case collisionType.left: {
-      gameState.ball.xDir *= -1
+      gameState.ball.xDir = Math.abs(gameState.ball.xDir)
       break
     }
     case collisionType.right: {
-      gameState.ball.xDir *= -1
+      gameState.ball.xDir = -Math.abs(gameState.ball.xDir)
       break
     }
     case collisionType.bottom:{
@@ -202,7 +237,7 @@ function update() {
       break
     }
     case collisionType.top: {
-      gameState.ball.yDir *= -1
+      gameState.ball.yDir = Math.abs(gameState.ball.yDir)
       break
     }
   }
@@ -210,11 +245,11 @@ function update() {
   gameState.ball.x += gameState.ball.xDir * gameState.ball.speed
   gameState.ball.y += gameState.ball.yDir * gameState.ball.speed
 
-  if (gameState.bonus.active || true) {
+  if (gameState.bonus.active) {
     switch(getBonusCollisionType()) {
       case collisionType.racket: {
+        gameState.score += gameState.bonus.value
         gameState.bonus.active = false
-        console.log("bonus vs rocket collision")
         break
       }
       case collisionType.bottom: {
